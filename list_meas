@@ -1,0 +1,11 @@
+#!/bin/bash
+
+mkdir -p meas
+
+for i in {0..1000}
+do
+  curl -fs http://service.canal-plus.com/video/rest/getMEAs/cplus/$i > meas/$i
+  echo -n "."
+done
+echo ""
+echo "Done."

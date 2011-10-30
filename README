@@ -1,0 +1,72 @@
+CPVOD - Canal+ VOD (Video-On-Demand) pour Linux
+===============================================
+
+Ce script permet de télécharger les vidéos proposées sur le site player.canalplus.fr, site nécessitant la technologie propriétaire Flash.
+
+Le script télécharge les vidéos avec la plus haute qualité disponible (HD, haut débit ou bas débit). Les vidéos téléchargées sont au format .flv (lisible avec mplayer ou vlc entre autres).
+
+Les vidéos sont sauvegardées dans ~/.cpvod. Le dossier ByIDs contient toutes les vidéos (en cours de téléchargement et téléchargées). Le dossier ByFileNames ne contient que les vidéos complètement téléchargées (un hardlink est créé entre les fichiers des deux dossiers).
+
+Le code couleur du logiciel est le suivant :
+  - Bleu : pas encore téléchargé
+  - Jaune : téléchargement en cours
+  - Vert : téléchargement complet
+  - Rouge : téléchargement interrompu ou vidéo plus disponible en ligne
+
+Dépendances :
+-------------
+ - ruby
+ - Module Ruby Nokogiri (sudo gem install nokogiri)
+ - libxml(-dev)
+ - libxslt(-dev)
+ - flvstreamer
+
+Versions :
+----------
+
+- 0.7.2 - 20/10/2011
+  - Ajout des séries Bref et Une minute avant.
+  - Ajout du script permettant de lister les MEAs
+
+- 0.7.1 - 06/01/2010
+  - Correction d'un bug dans la fonction d'affichage de texte centré lorsque le terminal est trop petit
+
+- 0.7 - 22/12/2010
+  - Possibilité de configurer la liste des MEAs en début de script
+  - Utilisation de toute la largeur du terminal
+
+- 0.6.4 - 22/12/2010
+  - Modifications internes suite à une modification de Canal+. Les recherches ("search" sur le webservice) ne trouvent plus les émissions. Passage à l'utilisation des MEA (catégories).
+  - Ajout du raccourci caché "m" pour ouvrir un MEA quelconque (utile pour en trouver de nouveaux)
+
+- 0.6.3 - 03/11/2010
+  - Ajout du raccourci pour le Zapping
+
+- 0.6.2 - 14/09/2010
+  - Ajout des raccourcis pour certaines recherches (Groland, Guignols, SAV, Petit Journal...)
+
+- 0.6.1 - 15/07/2010
+  - Désactivation du remplacement des espaces par des underscores lors des recherches (l'espace sert d'opérateur AND sur le webservice maintenant).
+
+- 0.6 - 02/07/2010
+  - Modification de l'adresse du WebService Canal+
+
+- 0.5 - 18/02/2010
+  - Gestion des vidéos telechargées (mode "local")
+  - Ajout de la fonctionnalité de suppression de vidéo
+  - Léger changement du code couleur : le jaune est pour les téléchargements en cours, les téléchargements interrompus sont en rouge
+
+- 0.4 - 18/02/2010
+  - Utilisation de Nokogiri a la place de REXML qui plantait sur les sections CDATA
+
+- 0.3 - 15/02/2010
+  - Téléchargements dans le dossier ~/.cpvod
+  - Affichage coloré indiquant la présence complète/partielle des fichiers dans ~/.cpvod
+  - Exécution d'un lecteur video (mplayer par défaut) à partir de l'interface
+ 
+- 0.2 - 15/02/2010
+  - Utilisation de flvstreamer a la place de rtmpdump
+  - Option "qualite max"
+
+- 0.1 - 14/02/2010
+

@@ -1,0 +1,472 @@
+#!/usr/bin/env ruby
+
+# Canal+ VOD pour Linux
+# Licence: GPLv3
+
+cpvod_version = "0.7.2"
+
+##################################
+# Configuration
+#==============
+# Qualite video maximale souhaitee
+# 3 = HD (default)
+# 2 = Haut debit
+# 1 = Bas debit
+$qualite_max = 3
+
+# Video player to use
+$player = "mplayer -really-quiet"
+
+# Delay between beginning of download and video playing
+$play_delay = 3
+
+# MEAs
+$meas = { 254 => "Groland",
+          304 => "Action discrete",
+          48  => "Les Guignols de l'info",
+          252 => "Le SAV d'Omar et Fred",
+          249 => "Le Petit Journal",
+          104 => "Le Grand Journal",
+          303 => "Stephane Guillon (SLT)",
+          201 => "Le Zapping",
+          259 => "La petite semaine de Bruno Donnet",
+          286 => "Chris Esquerre (Tout le monde...)",
+          325 => "Une minute avant",
+          627 => "Bref",
+        }
+
+
+##################################
+
+require 'nokogiri'
+require 'etc'
+require 'fileutils'
+require 'open-uri'
+require 'cgi'
+
+# Paths
+$app_dir = Etc.getpwuid.dir + "/.cpvod/"
+$id_dir = $app_dir + "cache/ByIDs/"
+$fn_dir = $app_dir + "cache/ByFileNames/"
+$local_xml = $app_dir + "cache/local.xml"
+
+# Create directories
+FileUtils.mkdir_p $app_dir
+FileUtils.mkdir_p $id_dir
+FileUtils.mkdir_p $fn_dir
+
+# Active downloads
+$downloads = []
+$threads = []
+
+def search(root, s)
+   # Encode URL
+   s = CGI.escape(s)
+   doc = Nokogiri::XML(open('http://webservice.canal-plus.com/rest/bigplayer/search/'+s))
+   doc.root
+end
+
+def mea(id)
+   # Encode URL
+   meas = Nokogiri::XML(open('http://service.canal-plus.com/video/rest/getMEAs/cplus/'+id.to_s))
+   ids = meas.root.xpath('//MEA').collect{ |m| m.xpath('ID').text }
+   doc = Nokogiri::XML('<VIDEOS></VIDEOS>')
+   ids.each { |id| 
+      video = Nokogiri::XML(open('http://service.canal-plus.com/video/rest/getVideos/cplus/'+id))
+      doc.root.add_child(video.root.xpath('//VIDEO').first.dup)
+   }
+   doc.root
+end
+
+def list(root)
+   videos = root.xpath('//VIDEO')
+   if not videos.empty? then
+      videos.each_with_index { |video,index|
+         quality = getVideoQuality(video)
+         fnid = getVideoIdFile(video)
+         fn = getVideoFnFile(video)
+         vidid = video.xpath('ID').text
+
+         # Check if video is already downloaded
+         color = ""
+         if File.exists?(fn) then
+            color = "\e[32m"  # completely downloaded video
+         elsif $downloads.include?(vidid) then
+            color = "\e[33m"  # currently downloading
+         elsif File.exists?(fnid) then
+            color = "\e[31m"  # partially downloaded (or error (file size == 0))
+         else
+            color = "\e[34m"  # default
+         end
+
+         infos = video.xpath('INFOS')
+
+         print color
+         puts_centered("[" + (index+1).to_s + "] (" + quality + ") " + 
+            infos.xpath('TITRAGE').xpath('TITRE').text + " - "+
+            infos.xpath('PUBLICATION').xpath('DATE').text + " ("+
+            infos.xpath('TITRAGE').xpath('SOUS_TITRE').text + ")")
+         print "\e[0m"
+      }
+      root
+   else
+      puts_centered('Liste vide')
+      nil
+   end
+end
+
+def getVideoUrl(video)
+   vds = video.xpath('./MEDIA/VIDEOS')
+   quality = getVideoQuality(video)
+   return vds.xpath(quality).text
+end
+
+def getVideoQuality(video)
+   quality = ""
+   vds = video.xpath('MEDIA').xpath('VIDEOS')
+   if ($qualite_max >= 3 && vds.xpath('HD') != nil && vds.xpath('HD').text != '')
+      quality = "HD"
+   elsif ($qualite_max >= 2 && vds.xpath('HAUT_DEBIT') != nil && vds.xpath('HAUT_DEBIT').text != '')
+      quality = "HAUT_DEBIT"
+   elsif (vds.xpath('BAS_DEBIT') != nil && vds.xpath('BAS_DEBIT').text != '')
+      quality = "BAS_DEBIT"
+   end
+   return quality
+end
+
+def getVideoIdFile(video)
+   vidid = video.xpath('./ID').text
+   quality = getVideoQuality(video)
+   return $id_dir + vidid + "-" + quality + ".flv"
+end
+
+def getVideoFnFile(video)
+   return $fn_dir + File.basename(getVideoUrl(video))
+end
+
+def download(root, id)
+   r = root.xpath('./VIDEO['+id.to_s+']')
+
+   # Check if id is a valid number
+   if r.empty?
+      puts "Numero invalide"
+      wait_for_key
+      return
+   end
+
+   # Get unique video ID
+   vidid = r.xpath('ID').text
+
+   # Check if we're not already downloading this video
+   if $downloads.include?(vidid) then
+      puts "Video deja en cours de telechargement"
+      return
+   end
+
+   # Indicates we're downloading this video
+   $downloads.push(vidid)
+
+
+   fn = getVideoFnFile(r)
+   fnid = getVideoIdFile(r)
+   vidurl = getVideoUrl(r)
+
+   $local.root.add_child(r.first.dup)
+   save_local($local)
+
+   $threads << Thread.new(fn,fnid,vidurl,vidid) { |fn,fnid,vidurl,vidid|
+      begin
+         cmd = "flvstreamer -q -e -r " + vidurl + " -o " + fnid
+         system(cmd)
+         if $?.exitstatus == 0 then
+            system("ln -f "+ fnid + " " + fn)
+         else
+            puts "Impossible de telecharger la video"
+         end
+      ensure
+         $downloads.delete(vidid)
+      end
+   }
+end
+
+def delete(root, id)
+   r = root.xpath('./VIDEO['+id.to_s()+']')
+
+   # Check if id is a valid number
+   if r.empty?
+      puts "Numero invalide"
+      wait_for_key
+      return
+   end
+
+   # Get unique video ID
+   vidid = r.xpath('ID').text
+
+   # Check if we're not already downloading this video
+   if $downloads.include?(vidid) then
+      puts "Impossible de supprimer une video en cours de telechargement"
+      return
+   end
+
+   fn = getVideoFnFile(r)
+   fnid = getVideoIdFile(r)
+
+   if (File.exist?(fnid))
+      File.delete(fnid)
+   end
+
+   if (File.exist?(fn))
+      File.delete(fn)
+   end
+
+   if root == $local.root then
+      r.remove
+      save_local($local)
+   end
+end
+
+def wait_for_key
+   puts "Appuyez sur une touche pour continuer"
+   begin
+      system("stty raw -echo")
+      str = STDIN.getc
+   ensure
+      system("stty -raw echo")
+   end
+end
+
+def play(root, id)
+   r = root.xpath('./VIDEO['+id.to_s()+']')
+
+   # Check if id is a valid number
+   if (r == nil)
+      puts "Numero invalide"
+      wait_for_key
+   end
+
+   fnid = getVideoIdFile(r)
+
+   # Check if this video has been downloaded
+   if not File.exists?(fnid) then
+      download(root, id) # if not, start downloading
+      puts "Demarrage de la video dans "+String($play_delay)+" secondes..."
+      sleep($play_delay)
+   end
+
+   # Launch video player
+   pid = fork
+   if pid.nil? then
+      File.open("/dev/null", "r+") do |devnull|
+         $stdout.reopen(devnull)
+         $stderr.reopen(devnull)
+         $stdin.reopen(devnull)
+      end
+
+      exec($player +" "+ fnid)
+   else
+      Process.detach(pid)
+   end
+end
+
+def save_local(doc)
+   flocal = File.open($local_xml, File::WRONLY|File::CREAT|File::TRUNC)
+   flocal.puts(doc.to_xml)
+   flocal.close
+end
+
+# Determines if a shell command exists by searching for it in ENV['PATH'].
+def command_exists?(command)
+ ENV['PATH'].split(File::PATH_SEPARATOR).any? {|d| File.exists? File.join(d, command) }
+end
+
+# Returns width of terminal when detected, 80 if not detected.
+def terminal_size
+  if (ENV['COLUMNS'] =~ /^\d+$/)
+    ENV['COLUMNS'].to_i
+  elsif (RUBY_PLATFORM =~ /java/ || (!STDIN.tty? && ENV['TERM'])) && command_exists?('tput')
+    `tput cols`.to_i
+  elsif STDIN.tty? && command_exists?('stty')
+    `stty size`.scan(/\d+/).map { |s| s.to_i }.reverse.first
+  else
+    80
+  end
+rescue
+  80
+end
+
+def fill_line
+  width = terminal_size
+  puts ('#' * width)
+end
+
+# Return centered text
+def centered(text,width)
+  w = [width - text.length, 0].max
+  blank1 = w/2
+  blank0 = blank1 + w%2
+  (" "*blank0) + text + (" "*blank1)
+end
+
+def lines_wrap(lines,width,sep)
+  current_pos = 0
+  current = ""
+  res = []
+  lines.each { |l|
+    if (current_pos == 0)
+      current = l
+      current_pos = l.length
+    elsif (current_pos + l.length + sep.length < width)
+      current = current + sep + l
+      current_pos = current_pos + sep.length + l.length
+    else 
+      res = res + [current]
+      current = l
+      current_pos = l.length
+    end
+  }
+  if (current != "")
+    res = res + [current]
+  end
+  
+  res
+end
+
+# Print lines surrounded by a frame
+def puts_framed(lines)
+  width = terminal_size
+  fill_line
+  lines.each { |l|
+    puts "#" + centered(l,width-2) + "#"
+  }
+  fill_line
+end
+
+def puts_centered_wrapped(lines,before,sep,after)
+  width = terminal_size
+  w = width - before.length - after.length
+  lines_wrap(lines, w,sep).each{ |l| 
+    puts before + centered(l,w) + after
+  }
+end
+
+def puts_centered(t)
+  width = terminal_size
+  puts centered(t,width)
+end
+
+#####################################
+# Initialization
+#####################################
+
+root = nil
+$local = nil
+
+if !File.exist?($local_xml) then
+   $local = Nokogiri::XML::Builder.new do |xml|
+      xml.VIDEOS {
+      }
+   end
+   save_local($local)
+end
+
+flocal = File.open($local_xml, File::RDONLY)
+$local = Nokogiri::XML(flocal)
+flocal.close
+
+
+#####################################
+# Main loop
+#####################################
+while (true) do
+
+  system("clear")
+
+  puts_framed ["Canal+ VOD pour Linux ("+cpvod_version+")"]
+
+  if root != nil then
+    root = list(root)
+    fill_line
+  end
+
+  if root != nil then
+    menu = ["[C]hercher", "[L]ocal", "[T]elecharger", "[J]ouer", "[S]upprimer", "[Q]uitter"]
+  else
+    menu = ["[C]hercher", "[L]ocal", "[Q]uitter"]
+  end
+
+  puts_centered_wrapped(menu, '  ', ' ', '  ')
+
+
+  shortcuts = []
+  $meas.values.each_with_index { |e,i|
+    shortcuts = shortcuts + ["[r"+i.to_s+" "+e+"]"]
+  }
+
+  puts_centered_wrapped(shortcuts, '  ', ' ', '  ')
+   
+   print "\n> "
+
+   action = gets.chomp.downcase
+   case action[0]
+      when 'r'
+        begin
+          n = Integer(action.slice(1,5))
+          root = mea($meas.keys[n])
+        rescue
+        end
+      when 'c'
+         print "Chercher : "
+         root = search(root, gets.chomp)
+      when 'm'
+         print "MEA : "
+         root = mea(gets.chomp)
+      when 'l'
+         root = $local.root
+      when 't'
+         if (root == nil) then
+            puts "Vous devez effectuer une recherche avant de telecharger"
+            wait_for_key
+         else
+            print "> Numero de la video a telecharger : "
+            download(root, Integer(gets.chomp))
+            sleep(0.5)
+         end
+      when 'j'
+         if (root == nil) then
+            puts "Vous devez effectuer une recherche avant de jouer une video"
+            wait_for_key
+         else
+            print "> Numero de la video a jouer : "
+            play(root, Integer(gets.chomp))
+         end
+      when 's'
+         if (root == nil) then
+            puts "Vous devez effectuer une recherche avant de supprimer une video"
+            wait_for_key
+         else
+            print "> Numero de la video a supprimer : "
+            delete(root, Integer(gets.chomp))
+         end
+      when 'q'
+         msg = false
+         $threads.each { |t|
+            if t.alive? then
+               if not msg then
+                  puts "Attente de la terminaison des telechargements..."
+                  msg = true
+               end
+               t.join
+            end
+         }
+         puts "Telechargements termines" if msg
+         exit
+      else
+         # If a number is enterred, try to play associated video
+         begin
+            if (root != nil) then
+               play(root, Integer(action))
+            end
+         rescue
+         end
+   end
+end
