@@ -24,6 +24,9 @@ Dépendances :
 Versions :
 ----------
 
+- 0.7.3 - 08/11/2011
+  - Correction d'un bug avec certaines version de Ruby (merci Olivier)
+
 - 0.7.2 - 20/10/2011
   - Ajout des séries Bref et Une minute avant.
   - Ajout du script permettant de lister les MEAs

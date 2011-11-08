@@ -3,7 +3,7 @@
 # Canal+ VOD pour Linux
 # Licence: GPLv3
 
-cpvod_version = "0.7.2"
+cpvod_version = "0.7.3"
 
 ##################################
 # Configuration
@@ -407,66 +407,68 @@ while (true) do
    print "\n> "
 
    action = gets.chomp.downcase
-   case action[0]
-      when 'r'
-        begin
-          n = Integer(action.slice(1,5))
-          root = mea($meas.keys[n])
-        rescue
-        end
-      when 'c'
-         print "Chercher : "
-         root = search(root, gets.chomp)
-      when 'm'
-         print "MEA : "
-         root = mea(gets.chomp)
-      when 'l'
-         root = $local.root
-      when 't'
-         if (root == nil) then
-            puts "Vous devez effectuer une recherche avant de telecharger"
-            wait_for_key
-         else
-            print "> Numero de la video a telecharger : "
-            download(root, Integer(gets.chomp))
-            sleep(0.5)
-         end
-      when 'j'
-         if (root == nil) then
-            puts "Vous devez effectuer une recherche avant de jouer une video"
-            wait_for_key
-         else
-            print "> Numero de la video a jouer : "
-            play(root, Integer(gets.chomp))
-         end
-      when 's'
-         if (root == nil) then
-            puts "Vous devez effectuer une recherche avant de supprimer une video"
-            wait_for_key
-         else
-            print "> Numero de la video a supprimer : "
-            delete(root, Integer(gets.chomp))
-         end
-      when 'q'
-         msg = false
-         $threads.each { |t|
-            if t.alive? then
-               if not msg then
-                  puts "Attente de la terminaison des telechargements..."
-                  msg = true
-               end
-               t.join
-            end
-         }
-         puts "Telechargements termines" if msg
-         exit
-      else
-         # If a number is enterred, try to play associated video
-         begin
-            if (root != nil) then
-               play(root, Integer(action))
-            end
-         rescue
-         end
+   if action[0] != nil
+     case action[0].chr
+        when 'r'
+          begin
+            n = Integer(action.slice(1,5))
+            root = mea($meas.keys[n])
+          rescue
+          end
+        when 'c'
+           print "Chercher : "
+           root = search(root, gets.chomp)
+        when 'm'
+           print "MEA : "
+           root = mea(gets.chomp)
+        when 'l'
+           root = $local.root
+        when 't'
+           if (root == nil) then
+              puts "Vous devez effectuer une recherche avant de telecharger"
+              wait_for_key
+           else
+              print "> Numero de la video a telecharger : "
+              download(root, Integer(gets.chomp))
+              sleep(0.5)
+           end
+        when 'j'
+           if (root == nil) then
+              puts "Vous devez effectuer une recherche avant de jouer une video"
+              wait_for_key
+           else
+              print "> Numero de la video a jouer : "
+              play(root, Integer(gets.chomp))
+           end
+        when 's'
+           if (root == nil) then
+              puts "Vous devez effectuer une recherche avant de supprimer une video"
+              wait_for_key
+           else
+              print "> Numero de la video a supprimer : "
+              delete(root, Integer(gets.chomp))
+           end
+        when 'q'
+           msg = false
+           $threads.each { |t|
+              if t.alive? then
+                 if not msg then
+                    puts "Attente de la terminaison des telechargements..."
+                    msg = true
+                 end
+                 t.join
+              end
+           }
+           puts "Telechargements termines" if msg
+           exit
+        else
+           # If a number is enterred, try to play associated video
+           begin
+              if (root != nil) then
+                 play(root, Integer(action))
+              end
+           rescue
+           end
+     end
    end
 end
