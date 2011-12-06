@@ -3,7 +3,7 @@
 # Canal+ VOD pour Linux
 # Licence: GPLv3
 
-cpvod_version = "0.7.3"
+cpvod_version = "0.7.4"
 
 ##################################
 # Configuration
@@ -12,13 +12,13 @@ cpvod_version = "0.7.3"
 # 3 = HD (default)
 # 2 = Haut debit
 # 1 = Bas debit
-$qualite_max = 3
+$max_quality = 3
 
 # Video player to use
 $player = "mplayer -really-quiet"
 
 # Delay between beginning of download and video playing
-$play_delay = 3
+$buffering_delay = 3
 
 # MEAs
 $meas = { 254 => "Groland",
@@ -46,9 +46,14 @@ require 'cgi'
 
 # Paths
 $app_dir = Etc.getpwuid.dir + "/.cpvod/"
+$config_file = $app_dir + "config"
 $id_dir = $app_dir + "cache/ByIDs/"
 $fn_dir = $app_dir + "cache/ByFileNames/"
 $local_xml = $app_dir + "cache/local.xml"
+
+if File.exists?($config_file) then
+  load $config_file
+end
 
 # Create directories
 FileUtils.mkdir_p $app_dir
@@ -124,9 +129,9 @@ end
 def getVideoQuality(video)
    quality = ""
    vds = video.xpath('MEDIA').xpath('VIDEOS')
-   if ($qualite_max >= 3 && vds.xpath('HD') != nil && vds.xpath('HD').text != '')
+   if ($max_quality >= 3 && vds.xpath('HD') != nil && vds.xpath('HD').text != '')
       quality = "HD"
-   elsif ($qualite_max >= 2 && vds.xpath('HAUT_DEBIT') != nil && vds.xpath('HAUT_DEBIT').text != '')
+   elsif ($max_quality >= 2 && vds.xpath('HAUT_DEBIT') != nil && vds.xpath('HAUT_DEBIT').text != '')
       quality = "HAUT_DEBIT"
    elsif (vds.xpath('BAS_DEBIT') != nil && vds.xpath('BAS_DEBIT').text != '')
       quality = "BAS_DEBIT"
@@ -249,8 +254,8 @@ def play(root, id)
    # Check if this video has been downloaded
    if not File.exists?(fnid) then
       download(root, id) # if not, start downloading
-      puts "Demarrage de la video dans "+String($play_delay)+" secondes..."
-      sleep($play_delay)
+      puts "Demarrage de la video dans "+String($buffering_delay)+" secondes..."
+      sleep($buffering_delay)
    end
 
    # Launch video player

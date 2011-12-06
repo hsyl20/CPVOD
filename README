@@ -13,6 +13,12 @@ Le code couleur du logiciel est le suivant :
   - Vert : téléchargement complet
   - Rouge : téléchargement interrompu ou vidéo plus disponible en ligne
 
+Le fichier ~/.cpvod/config peut contenir du code Ruby qui sera exécuté au démarrage de CPVOD. Il permet de modifier :
+  - $player : le lecteur vidéo (mplayer par défaut) 
+  - $buffering_delay : le délai entre le début du téléchargement et le début de la lecture (3 sec par défaut)
+  - $max_quality : la qualité maximale souhaitée de 1 à 3 avec 1 = bas débit, 2 = haut débit et 3 = HD (3 par défaut)
+  - $meas : liste des catégories (couples id => "description")
+
 Dépendances :
 -------------
  - ruby
@@ -23,6 +29,9 @@ Dépendances :
 
 Versions :
 ----------
+
+- 0.7.4 - 06/12/2011
+  - Permet l'utilisation d'un fichier de configuration
 
 - 0.7.3 - 08/11/2011
   - Correction d'un bug avec certaines version de Ruby (merci Olivier)
