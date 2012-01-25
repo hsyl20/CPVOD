@@ -3,7 +3,7 @@
 # Canal+ VOD pour Linux
 # Licence: GPLv3
 
-cpvod_version = "0.7.4"
+cpvod_version = "0.7.5"
 
 ##################################
 # Configuration
@@ -181,7 +181,11 @@ def download(root, id)
 
    $threads << Thread.new(fn,fnid,vidurl,vidid) { |fn,fnid,vidurl,vidid|
       begin
-         cmd = "flvstreamer -q -e -r " + vidurl + " -o " + fnid
+         if vidurl.match(/^rtmp/)
+            cmd = "flvstreamer -q -e -r " + vidurl + " -o " + fnid
+         else
+            cmd = "wget --quiet " + vidurl + " -O " + fnid
+         end
          system(cmd)
          if $?.exitstatus == 0 then
             system("ln -f "+ fnid + " " + fn)

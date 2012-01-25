@@ -1,11 +1,17 @@
 CPVOD - Canal+ VOD (Video-On-Demand) pour Linux
 ===============================================
 
-Ce script permet de télécharger les vidéos proposées sur le site player.canalplus.fr, site nécessitant la technologie propriétaire Flash.
+Ce script permet de télécharger les vidéos proposées sur le site
+player.canalplus.fr, site nécessitant la technologie propriétaire Flash.
 
-Le script télécharge les vidéos avec la plus haute qualité disponible (HD, haut débit ou bas débit). Les vidéos téléchargées sont au format .flv (lisible avec mplayer ou vlc entre autres).
+Le script télécharge les vidéos avec la plus haute qualité disponible (HD, haut
+débit ou bas débit). Les vidéos téléchargées sont au format .flv (lisible avec
+mplayer ou vlc entre autres).
 
-Les vidéos sont sauvegardées dans ~/.cpvod. Le dossier ByIDs contient toutes les vidéos (en cours de téléchargement et téléchargées). Le dossier ByFileNames ne contient que les vidéos complètement téléchargées (un hardlink est créé entre les fichiers des deux dossiers).
+Les vidéos sont sauvegardées dans ~/.cpvod. Le dossier ByIDs contient toutes
+les vidéos (en cours de téléchargement et téléchargées). Le dossier ByFileNames
+ne contient que les vidéos complètement téléchargées (un hardlink est créé
+entre les fichiers des deux dossiers).
 
 Le code couleur du logiciel est le suivant :
   - Bleu : pas encore téléchargé
@@ -13,10 +19,13 @@ Le code couleur du logiciel est le suivant :
   - Vert : téléchargement complet
   - Rouge : téléchargement interrompu ou vidéo plus disponible en ligne
 
-Le fichier ~/.cpvod/config peut contenir du code Ruby qui sera exécuté au démarrage de CPVOD. Il permet de modifier :
+Le fichier ~/.cpvod/config peut contenir du code Ruby qui sera exécuté au
+démarrage de CPVOD. Il permet de modifier :
   - $player : le lecteur vidéo (mplayer par défaut) 
-  - $buffering_delay : le délai entre le début du téléchargement et le début de la lecture (3 sec par défaut)
-  - $max_quality : la qualité maximale souhaitée de 1 à 3 avec 1 = bas débit, 2 = haut débit et 3 = HD (3 par défaut)
+  - $buffering_delay : le délai entre le début du téléchargement et le début de
+    la lecture (3 sec par défaut)
+  - $max_quality : la qualité maximale souhaitée de 1 à 3 avec 1 = bas débit, 2
+    = haut débit et 3 = HD (3 par défaut)
   - $meas : liste des catégories (couples id => "description")
 
 Dépendances :
@@ -30,6 +39,9 @@ Dépendances :
 Versions :
 ----------
 
+- 0.7.5 - 25/01/2012
+  - Utilise wget pour les flux non rtmp
+
 - 0.7.4 - 06/12/2011
   - Permet l'utilisation d'un fichier de configuration
 
@@ -41,24 +53,30 @@ Versions :
   - Ajout du script permettant de lister les MEAs
 
 - 0.7.1 - 06/01/2010
-  - Correction d'un bug dans la fonction d'affichage de texte centré lorsque le terminal est trop petit
+  - Correction d'un bug dans la fonction d'affichage de texte centré lorsque le
+    terminal est trop petit
 
 - 0.7 - 22/12/2010
   - Possibilité de configurer la liste des MEAs en début de script
   - Utilisation de toute la largeur du terminal
 
 - 0.6.4 - 22/12/2010
-  - Modifications internes suite à une modification de Canal+. Les recherches ("search" sur le webservice) ne trouvent plus les émissions. Passage à l'utilisation des MEA (catégories).
-  - Ajout du raccourci caché "m" pour ouvrir un MEA quelconque (utile pour en trouver de nouveaux)
+  - Modifications internes suite à une modification de Canal+. Les recherches
+    ("search" sur le webservice) ne trouvent plus les émissions. Passage à
+    l'utilisation des MEA (catégories).
+  - Ajout du raccourci caché "m" pour ouvrir un MEA quelconque (utile pour en
+    trouver de nouveaux)
 
 - 0.6.3 - 03/11/2010
   - Ajout du raccourci pour le Zapping
 
 - 0.6.2 - 14/09/2010
-  - Ajout des raccourcis pour certaines recherches (Groland, Guignols, SAV, Petit Journal...)
+  - Ajout des raccourcis pour certaines recherches (Groland, Guignols, SAV,
+    Petit Journal...)
 
 - 0.6.1 - 15/07/2010
-  - Désactivation du remplacement des espaces par des underscores lors des recherches (l'espace sert d'opérateur AND sur le webservice maintenant).
+  - Désactivation du remplacement des espaces par des underscores lors des
+    recherches (l'espace sert d'opérateur AND sur le webservice maintenant).
 
 - 0.6 - 02/07/2010
   - Modification de l'adresse du WebService Canal+
@@ -66,14 +84,17 @@ Versions :
 - 0.5 - 18/02/2010
   - Gestion des vidéos telechargées (mode "local")
   - Ajout de la fonctionnalité de suppression de vidéo
-  - Léger changement du code couleur : le jaune est pour les téléchargements en cours, les téléchargements interrompus sont en rouge
+  - Léger changement du code couleur : le jaune est pour les téléchargements en
+    cours, les téléchargements interrompus sont en rouge
 
 - 0.4 - 18/02/2010
-  - Utilisation de Nokogiri a la place de REXML qui plantait sur les sections CDATA
+  - Utilisation de Nokogiri a la place de REXML qui plantait sur les sections
+    CDATA
 
 - 0.3 - 15/02/2010
   - Téléchargements dans le dossier ~/.cpvod
-  - Affichage coloré indiquant la présence complète/partielle des fichiers dans ~/.cpvod
+  - Affichage coloré indiquant la présence complète/partielle des fichiers dans
+    ~/.cpvod
   - Exécution d'un lecteur video (mplayer par défaut) à partir de l'interface
  
 - 0.2 - 15/02/2010
